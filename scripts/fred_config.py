@@ -12,9 +12,12 @@ from config import FRED_API_KEY
 
 # Dictionary mapping FRED series codes to descriptive names
 FRED_SERIES = {
+    "DFF": "Federal Funds Effective Rate",
     "DGS3MO": "3-month Treasury Bill",
+    "DGS1": "1-Year Treasury Yield",
     "DGS2": "2-Year Treasury Yield",
     "DGS5": "5-Year Treasury Yield",
+    "DGS7": "7-Year Treasury Yield",
     "DGS10": "10-Year Treasury Yield",
 }
 

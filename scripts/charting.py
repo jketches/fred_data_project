@@ -48,20 +48,26 @@ def create_chart(data, series_list, start_date=None, title=None, show_data_label
     # Add a table if specified
     if show_table:
         # Initialize table data
-        table_data = [["Date", "Value"]]
+        #table_data = [["Date", "Value"]]
         # Add the last available data point
-        table_data.append([data[series].index[-1].strftime('%Y-%m-%d'), round(data[series].iloc[-1], 2)])
-        # Add user-specified dates and their values (if provided)
+        # Get the last non-NaN value and corresponding date
+        last_valid_index = data[series].last_valid_index()
+        last_date = last_valid_index.strftime('%Y-%m-%d') if last_valid_index else 'No Data'
+        last_value = data[series].loc[last_valid_index] if last_valid_index else 'N/A'
+        
+        # Build the table data
+        table_data = [["Date","Value"]]+[[last_date, f"{last_value:.2f}" if pd.notna(last_value) else "N/A"]]
+        # Add custom dates if provided
         if custom_dates:
             for date in custom_dates:
-                try:
-                    value = data[series].loc[date] if date in data.index else None
-                    table_data.append([date, round(value, 2) if value is not None else "N/A"])
-                except Exception:
+                if date in data[series].index:
+                    value = data[series].loc[date]
+                    table_data.append([date, f"{value:.2f}" if pd.notna(value) else "N/A"])
+                else:
                     table_data.append([date, "N/A"])
         
         table = ax.table(cellText=table_data, cellLoc="center", colLabels=None,
-                         loc="bottom", bbox=[0.1, -0.5, 1.0, 0.3])
+                         loc="bottom", bbox=[0.1, -0.7, 0.8, 0.5])
         table.auto_set_font_size(False)
         table.set_fontsize(8)
         table.scale(1, 1.2)  # Adjust table size for better readability
