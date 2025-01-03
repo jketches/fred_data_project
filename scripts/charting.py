@@ -1,87 +1,79 @@
 import matplotlib.pyplot as plt
-import pandas as pd
-from matplotlib.dates import DateFormatter
-
-# Import FRED config for variable names
+import matplotlib.dates as mdates
 from fred_config import FRED_SERIES
+import pandas as pd
 
-def create_chart(data, variables, start_date=None, end_date=None, title=None, 
-                 show_data_label=False, vlines=None, show_table=False, save_path=None):
+def create_chart(data, series_list, start_date=None, title=None, show_data_label=False, 
+                 vlines=None, show_table=False,custom_dates=None, save_path=None):
     """
-    Generates a line chart for single variables or groups of variables.
-
-    Parameters:
-        data (pd.DataFrame): The data containing the variables as columns.
-        variables (list): List of variables to plot (single or grouped).
-        start_date (str): Start date for the chart (format: "YYYY-MM-DD").
-        end_date (str): End date for the chart (format: "YYYY-MM-DD").
-        title (str): Title of the chart (None for single variable charts).
-        show_data_label (bool): Whether to show data labels for the last data point.
-        vlines (list): Dates for vertical lines (format: "YYYY-MM-DD").
-        show_table (bool): Whether to show a table of last values in the chart.
-        save_path (str): File path to save the chart (e.g., "results/chart.png").
+    Creates a line chart for specified series with optional features like labels, vlines, and a data table.
     
-    Returns:
-        None
+    Parameters:
+        data (pd.DataFrame): DataFrame containing the series as columns.
+        series_list (list): List of column names in `data` to plot.
+        start_date (str): The start date for filtering data (format: "YYYY-MM-DD").
+        title (str): Title for the chart.
+        show_data_label (bool): Whether to show a label for the last data point of each series.
+        vlines (list): List of dates (strings in "YYYY-MM-DD" format) to mark with vertical lines. 
+        show_table (bool): Whether to include a table of last dates and values below the chart.
+        save_path (str): Path to save the chart as a PNG file.
     """
-    # Filter data by date range
+    # Filter the data by start_date
     if start_date:
-        data = data[data.index >= start_date]
-    if end_date:
-        data = data[data.index <= end_date]
+        data = data.loc[start_date:]
+    
+    # Create the plot
+    fig, ax = plt.subplots(figsize=(6, 4))
+    ax.xaxis.set_major_locator(mdates.MonthLocator(interval=6))  # Change '2' to adjust the spacing
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%Y-%m'))  # Format labels as Year-Month
+    # Adjust label density
+    for series in series_list:
+        ax.plot(data.index, data[series], label=FRED_SERIES.get(series, series))
+        if show_data_label:
+            # Add a label for the last data point
+            last_date = data.index[-1]
+            last_value = data[series].iloc[-1]
+            ax.text(last_date, last_value, f"{last_value:.2f}", fontsize=8, ha="right")
 
-    # Initialize the figure
-    fig, ax = plt.subplots(figsize=(5, 4))  # Suitable for PDF grid (2x3 charts per page)
-
-    # Plot the variables
-    for var in variables:
-        if var in data.columns:
-            ax.plot(data.index, data[var], label=FRED_SERIES.get(var, var))
-
-    # Title and legend
-    if len(variables) == 1:
-        # Single variable: use its name as the title, no legend
-        ax.set_title(FRED_SERIES.get(variables[0], variables[0]), fontsize=12)
-    else:
-        # Group of variables: use the provided title and a legend
-        ax.set_title(title if title else "Chart", fontsize=12)
-        ax.legend(fontsize=9)
-
-    # Add vertical lines
+    # Add vertical lines if specified
     if vlines:
         for vline in vlines:
-            ax.axvline(pd.to_datetime(vline), color="red", linestyle="--", linewidth=1)
+            ax.axvline(pd.to_datetime(vline), color="gray", linestyle="--", linewidth=0.8)
+    
+    # Set the title and legend
+    ax.set_title(title if title else FRED_SERIES.get(series_list[0], series_list[0]))
+    if len(series_list) > 1:
+        ax.legend(loc="upper left", fontsize=8)
 
-    # Add data labels for the last data point
-    if show_data_label:
-        for var in variables:
-            if var in data.columns:
-                last_date = data[var].last_valid_index()
-                last_value = data[var].loc[last_date]
-                ax.text(last_date, last_value, f"{last_value:.2f}", fontsize=8, color="black")
-
-    # Table of last data values
+    # Add a table if specified
     if show_table:
-        last_values = {
-            var: [data[var].last_valid_index().strftime("%Y-%m-%d"), f"{data[var].iloc[-1]:.2f}"]
-            for var in variables if var in data.columns
-        }
-        cell_text = [v for v in last_values.values()]
-        row_labels = [FRED_SERIES.get(var, var) for var in variables if var in data.columns]
-        col_labels = ["Last Date", "Value"]
-        table = ax.table(cellText=cell_text, rowLabels=row_labels, colLabels=col_labels,
-                         loc="bottom", bbox=[0, -0.4, 1, 0.2])
+        # Initialize table data
+        table_data = [["Date", "Value"]]
+        # Add the last available data point
+        table_data.append([data[series].index[-1].strftime('%Y-%m-%d'), round(data[series].iloc[-1], 2)])
+        # Add user-specified dates and their values (if provided)
+        if custom_dates:
+            for date in custom_dates:
+                try:
+                    value = data[series].loc[date] if date in data.index else None
+                    table_data.append([date, round(value, 2) if value is not None else "N/A"])
+                except Exception:
+                    table_data.append([date, "N/A"])
+        
+        table = ax.table(cellText=table_data, cellLoc="center", colLabels=None,
+                         loc="bottom", bbox=[0.1, -0.5, 1.0, 0.3])
         table.auto_set_font_size(False)
         table.set_fontsize(8)
-        table.scale(1, 1.2)
-
-    # Formatting
-    ax.xaxis.set_major_formatter(DateFormatter("%Y-%m"))
-    ax.set_ylabel("Value")
-    ax.grid(True, linestyle="--", alpha=0.5)
-
-    # Tight layout and save
+        table.scale(1, 1.2)  # Adjust table size for better readability
+    
+    # Adjust layout
     plt.tight_layout()
+    
+    # Save the plot
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
+        print(f"Chart saved to: {save_path}")
+    
+    # Show the plot
     plt.show()
+
