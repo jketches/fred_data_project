@@ -38,7 +38,7 @@ def create_chart(data, series_list, start_date=None, title=None, show_data_label
     # Add vertical lines if specified
     if vlines:
         for vline in vlines:
-            ax.axvline(pd.to_datetime(vline), color="gray", linestyle="--", linewidth=0.8)
+            ax.axvline(pd.to_datetime(vline), color="black", linestyle="-", linewidth=0.8)
     
     # Set the title and legend
     ax.set_title(title if title else FRED_SERIES.get(series_list[0], series_list[0]))
@@ -67,14 +67,17 @@ def create_chart(data, series_list, start_date=None, title=None, show_data_label
                     table_data.append([date, "N/A"])
         
         table = ax.table(cellText=table_data, cellLoc="center", colLabels=None,
-                         loc="bottom", bbox=[0.1, -0.7, 0.8, 0.5])
+                         loc="bottom", bbox=[0.1, -0.8, 0.8, 0.6])
         table.auto_set_font_size(False)
         table.set_fontsize(8)
         table.scale(1, 1.2)  # Adjust table size for better readability
     
     # Adjust layout
     plt.tight_layout()
-    
+    # Assuming 'ax' is your axes object
+    ax.grid(axis='x', linestyle='--', color='gray', alpha=0.3)
+    ax.grid(axis='y', linestyle='--', color='gray', alpha=0.3)
+
     # Save the plot
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
