@@ -61,7 +61,7 @@ def create_comparison_table(data, series_list, custom_dates, title, output_file)
     ax.axis("off")
     
     # Add title
-    ax.set_title(title, fontsize=14, fontweight="bold", pad=10)
+    ax.set_title(title, fontsize=14, fontweight="bold", pad=1)
     
     # Add the table
     table = ax.table(cellText=table_data, colLabels=headers, loc="center", cellLoc="center")
@@ -71,7 +71,7 @@ def create_comparison_table(data, series_list, custom_dates, title, output_file)
     
     # Save the table
     plt.savefig(output_file, bbox_inches="tight", dpi=300)
-    plt.show()
+    #plt.show()
     plt.close()
     print(f"Table saved to {output_file}")
 
@@ -82,7 +82,7 @@ from fred_config import FRED_SERIES
 
 # Function for cumulative change table
 
-def create_analysis_table(series, start_date, data):
+def create_analysis_table(series, start_date, data, save_path):
     """
     Creates a table analyzing changes in series values starting from a specific date.
 
@@ -146,7 +146,7 @@ def create_analysis_table(series, start_date, data):
     table_df = pd.DataFrame(table_data).transpose()
 
     # Plot the table
-    fig, ax = plt.subplots(figsize=(12, 6))
+    fig, ax = plt.subplots(figsize=(8, 4))
     ax.axis("off")
     table = ax.table(
         cellText=table_df.values,
@@ -154,23 +154,23 @@ def create_analysis_table(series, start_date, data):
         cellLoc="center",
         loc="center",
     )
-    table.auto_set_font_size(False)
-    table.set_fontsize(10)
+    table.auto_set_font_size(True)
+    #table.set_fontsize(10)
     table.auto_set_column_width(col=list(range(len(table_df.columns))))
 
     
     # Add the title
     friendly_name = FRED_SERIES.get(series, series)
-    plt.title(friendly_name, fontsize=14, weight="bold", pad=120)
+    plt.title(friendly_name, fontsize=14, weight="bold", pad=180)
     # Adjust layout to ensure title is at the top and the table fits nicely
     plt.subplots_adjust(top=0.75)  # Adjust the top margin to make space for the title
 
     ax.axis("off")
 
     # Save the table
-    output_file = f"{series}_table.png"
+    output_file = save_path
     plt.savefig(output_file, bbox_inches="tight", dpi=300)
-    plt.show()
+    #plt.show()
     plt.close()
     print(f"Table saved to {output_file}")
 

@@ -82,7 +82,3 @@ def create_chart(data, series_list, start_date=None, title=None, show_data_label
     if save_path:
         plt.savefig(save_path, dpi=300, bbox_inches="tight")
         print(f"Chart saved to: {save_path}")
-    
-    # Show the plot
-    plt.show()
-
