@@ -71,7 +71,9 @@ class PDFReportGenerator:
         self.c.setFont("Helvetica", 10)
         page_text = f"Page {self.current_page}"
         self.c.drawString(self.width - 72, 30, page_text)
-        
+
+    
+
     def add_section(self, title, image_configs):
         """
         Add a new section with a title and images to the PDF.
@@ -83,22 +85,38 @@ class PDFReportGenerator:
         # Store section information for table of contents
         self.sections.append((title, self.current_page))
         
-        # Add title
-        if self.y_position < 100:
+        # Always start a new section on a new page if we're not near the top
+        if self.y_position < self.height - 100:
+            self.add_page_number()
             self.c.showPage()
             self.current_page += 1
             self.y_position = self.height - 50
             
+        # Add title
         self.c.setFont("Helvetica-Bold", 16)
-        # Calculate title width and center position
         title_width = self.c.stringWidth(title, "Helvetica-Bold", 16)
         x_position = (self.width - title_width) / 2
         self.c.drawString(x_position, self.y_position, title)
         self.y_position -= 30
         
+        # Calculate total height needed for first image/row
+        if image_configs:
+            preview_height = self._calculate_next_row_height(image_configs[0])
+            
+            # If there isn't enough space for title + first image, start new page
+            if self.y_position - preview_height < 100:
+                self.add_page_number()
+                self.c.showPage()
+                self.current_page += 1
+                self.y_position = self.height - 50
+                
+                # Redraw the title on the new page
+                self.c.setFont("Helvetica-Bold", 16)
+                self.c.drawString(x_position, self.y_position, title)
+                self.y_position -= 30
+        
         # Process image configurations
         current_row = []
-        
         for config in image_configs:
             if isinstance(config, str):
                 self._process_row([config])
@@ -114,15 +132,39 @@ class PDFReportGenerator:
             self._process_row(current_row)
             
         self.y_position -= 20
+
+    def _calculate_next_row_height(self, config):
+        """Calculate the height needed for the next row of images."""
+        if isinstance(config, str):
+            image_paths = [config]
+        elif isinstance(config, dict):
+            image_paths = [config['path']]
+        elif isinstance(config, list):
+            image_paths = config
+        else:
+            return 0
+            
+        available_width = self.width - 100
+        image_width = (available_width - (20 * (len(image_paths) - 1))) / len(image_paths)
+        
+        max_height = 0
+        for img_path in image_paths:
+            img = Image.open(img_path)
+            img_w, img_h = img.size
+            aspect_ratio = img_h / img_w
+            image_height = image_width * aspect_ratio
+            max_height = max(max_height, image_height)
+            
+        return max_height + 30  # Include padding 
         
     def _process_row(self, image_paths):
         """Process and draw a row of images."""
         if not image_paths:
             return
-            
+
         available_width = self.width - 100
         image_width = (available_width - (20 * (len(image_paths) - 1))) / len(image_paths)
-        
+
         max_height = 0
         image_heights = []
         for img_path in image_paths:
@@ -132,13 +174,13 @@ class PDFReportGenerator:
             image_height = image_width * aspect_ratio
             image_heights.append(image_height)
             max_height = max(max_height, image_height)
-            
+
         if self.y_position - max_height < 50:
             self.add_page_number()  # Add page number before new page
             self.c.showPage()
             self.current_page += 1
             self.y_position = self.height - 50
-            
+
         current_x = 50
         for img_path, image_height in zip(image_paths, image_heights):
             self.c.drawImage(
@@ -149,7 +191,7 @@ class PDFReportGenerator:
                 height=image_height
             )
             current_x += image_width + 20
-            
+
         self.y_position -= (max_height + 30)
     
     def save(self):
